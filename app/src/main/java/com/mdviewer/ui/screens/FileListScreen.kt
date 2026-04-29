@@ -1,6 +1,6 @@
 package com.mdviewer.ui.screens
 
-import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -13,8 +13,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import com.mdviewer.util.getFileName
+import com.mdviewer.util.readFileContent
 
 @Composable
 fun FileListScreen(
@@ -25,14 +25,22 @@ fun FileListScreen(
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? ->
-        uri?.let {
-            val fileName = getFileName(it)
-            val content = readFileContent(context, it)
-            if (content != null && fileName.endsWith(".md", ignoreCase = true)) {
-                onFileSelected(fileName, content)
-            }
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+
+        val fileName = getFileName(uri, context.contentResolver)
+        if (!fileName.endsWith(".md", ignoreCase = true)) {
+            Toast.makeText(context, "仅支持 .md 文件", Toast.LENGTH_SHORT).show()
+            return@rememberLauncherForActivityResult
         }
+
+        val content = readFileContent(uri, context.contentResolver)
+        if (content == null) {
+            Toast.makeText(context, "读取文件失败", Toast.LENGTH_SHORT).show()
+            return@rememberLauncherForActivityResult
+        }
+
+        onFileSelected(fileName, content)
     }
 
     Column(
@@ -93,21 +101,5 @@ fun FileListScreen(
         )
 
         Spacer(modifier = Modifier.height(8.dp))
-    }
-}
-
-private fun getFileName(uri: Uri): String {
-    val path = uri.path ?: "unknown.md"
-    return path.substringAfterLast('/').ifEmpty { "file.md" }
-}
-
-private fun readFileContent(context: android.content.Context, uri: Uri): String? {
-    return try {
-        val inputStream = context.contentResolver.openInputStream(uri)
-        inputStream?.use { stream ->
-            BufferedReader(InputStreamReader(stream)).readText()
-        }
-    } catch (e: Exception) {
-        null
     }
 }
