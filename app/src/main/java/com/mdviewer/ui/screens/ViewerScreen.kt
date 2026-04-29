@@ -1,7 +1,9 @@
 package com.mdviewer.ui.screens
 
-import android.graphics.Typeface
+import android.view.MotionEvent
 import android.view.ScaleGestureDetector
+import android.view.View
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -25,11 +27,8 @@ fun ViewerScreen(
     val context = LocalContext.current
 
     var textSizeSp by remember { mutableFloatStateOf(16f) }
-    val minSize = 10f
-    val maxSize = 36f
 
     val markwon = remember {
-        // Theme-aware: table cell padding, border, and row backgrounds
         val tablePlugin = io.noties.markwon.ext.tables.TablePlugin.create(
             object : io.noties.markwon.ext.tables.TablePlugin.ThemeConfigure {
                 override fun configureTheme(builder: TableTheme.Builder) {
@@ -77,32 +76,42 @@ fun ViewerScreen(
         ) {
             AndroidView(
                 factory = { ctx ->
-                    TextView(ctx).apply {
-                        setBackgroundColor(bgColor.toArgb())
-                        setTextColor(textColor.toArgb())
-                        textSize = textSizeSp
-                        // Enable vertical scrolling within the TextView
-                        movementMethod = android.text.method.ScrollingMovementMethod.getInstance()
-                        setVerticalScrollBarEnabled(true)
+                    ScrollView(ctx).apply {
+                        // Smooth fling scrolling
+                        overScrollMode = View.OVER_SCROLL_ALWAYS
+                        isVerticalScrollBarEnabled = true
+                        clipToPadding = false
 
-                        // Pinch-to-zoom using ScaleGestureDetector
+                        val textView = TextView(ctx).apply {
+                            setBackgroundColor(bgColor.toArgb())
+                            setTextColor(textColor.toArgb())
+                            textSize = textSizeSp
+                        }
+                        addView(textView)
+
+                        // Pinch-to-zoom — no size limits
                         val scaleDetector = ScaleGestureDetector(ctx, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
                             override fun onScale(detector: ScaleGestureDetector): Boolean {
-                                val newSize = (textSizeSp * detector.scaleFactor)
-                                    .coerceIn(minSize, maxSize)
-                                textSizeSp = newSize
-                                this@apply.textSize = newSize
+                                textSizeSp *= detector.scaleFactor
+                                textView.textSize = textSizeSp
                                 return true
                             }
                         })
-                        setOnTouchListener { view, event ->
+
+                        setOnTouchListener { _, event ->
                             scaleDetector.onTouchEvent(event)
-                            // Don't consume, let TextView handle scrolling
-                            false
+                            // During pinch (2+ fingers), consume event to prevent scroll
+                            // Single finger: let ScrollView handle smooth scrolling
+                            if (scaleDetector.isInProgress || (event != null && event.pointerCount > 1)) {
+                                true
+                            } else {
+                                false
+                            }
                         }
                     }
                 },
-                update = { textView ->
+                update = { scrollView ->
+                    val textView = scrollView.getChildAt(0) as TextView
                     textView.setTextColor(textColor.toArgb())
                     textView.setBackgroundColor(bgColor.toArgb())
                     textView.textSize = textSizeSp
