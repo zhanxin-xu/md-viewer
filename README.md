@@ -1,4 +1,6 @@
-<img src="screenshots/cover.png" width="400" alt="Markdown Viewer">
+<p align="center">
+  <img src="assets/icon.svg" width="120" alt="Markdown Viewer">
+</p>
 
 # Markdown Viewer 📝
 
