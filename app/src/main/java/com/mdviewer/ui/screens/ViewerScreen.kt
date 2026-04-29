@@ -1,17 +1,17 @@
 package com.mdviewer.ui.screens
 
-import android.view.MotionEvent
-import android.view.ScaleGestureDetector
 import android.view.View
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -73,11 +73,16 @@ fun ViewerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp)
+                // Pinch-to-zoom at Compose layer — avoids touch conflicts with ScrollView
+                .pointerInput(Unit) {
+                    detectTransformGestures { _, _, zoom, _ ->
+                        textSizeSp *= zoom
+                    }
+                }
         ) {
             AndroidView(
                 factory = { ctx ->
                     ScrollView(ctx).apply {
-                        // Smooth fling scrolling
                         overScrollMode = View.OVER_SCROLL_ALWAYS
                         isVerticalScrollBarEnabled = true
                         clipToPadding = false
@@ -88,26 +93,6 @@ fun ViewerScreen(
                             textSize = textSizeSp
                         }
                         addView(textView)
-
-                        // Pinch-to-zoom — no size limits
-                        val scaleDetector = ScaleGestureDetector(ctx, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-                            override fun onScale(detector: ScaleGestureDetector): Boolean {
-                                textSizeSp *= detector.scaleFactor
-                                textView.textSize = textSizeSp
-                                return true
-                            }
-                        })
-
-                        setOnTouchListener { _, event ->
-                            scaleDetector.onTouchEvent(event)
-                            // During pinch (2+ fingers), consume event to prevent scroll
-                            // Single finger: let ScrollView handle smooth scrolling
-                            if (scaleDetector.isInProgress || (event != null && event.pointerCount > 1)) {
-                                true
-                            } else {
-                                false
-                            }
-                        }
                     }
                 },
                 update = { scrollView ->
