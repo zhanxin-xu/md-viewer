@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/icon.svg" width="120" alt="Markdown Viewer">
+  <img src="assets/icon.png" width="120" alt="Markdown Viewer">
 </p>
 
 # Markdown Viewer 📝
