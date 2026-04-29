@@ -1,5 +1,6 @@
 package com.mdviewer.ui.screens
 
+import android.graphics.Typeface
 import android.view.ScaleGestureDetector
 import android.widget.TextView
 import androidx.compose.foundation.background
@@ -13,6 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import io.noties.markwon.Markwon
+import io.noties.markwon.ext.tables.TableTheme
 
 @Composable
 fun ViewerScreen(
@@ -27,9 +29,19 @@ fun ViewerScreen(
     val maxSize = 36f
 
     val markwon = remember {
+        // Theme-aware: table cell padding, border, and row backgrounds
+        val tablePlugin = io.noties.markwon.ext.tables.TablePlugin.create(
+            object : io.noties.markwon.ext.tables.TablePlugin.ThemeConfigure {
+                override fun configureTheme(builder: TableTheme.Builder) {
+                    builder
+                        .tableCellPadding(8)
+                        .tableBorderWidth(2)
+                }
+            }
+        )
         Markwon.builder(context)
             .usePlugin(io.noties.markwon.ext.strikethrough.StrikethroughPlugin.create())
-            .usePlugin(io.noties.markwon.ext.tables.TablePlugin.create(context))
+            .usePlugin(tablePlugin)
             .build()
     }
 
