@@ -1,3 +1,5 @@
+<img src="screenshots/cover.png" width="400" alt="Markdown Viewer">
+
 # Markdown Viewer 📝
 
 一款简约的 Android Markdown 文件查看器。
@@ -41,7 +43,7 @@ APK 输出：`app/build/outputs/apk/debug/app-debug.apk`
 
 ## 截图
 
-<img src="screenshots/screenshot.png" width="400" alt="Markdown Viewer 截图">
+*(待添加)*
 
 ---
 
