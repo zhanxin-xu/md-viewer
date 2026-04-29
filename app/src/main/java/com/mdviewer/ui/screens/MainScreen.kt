@@ -22,9 +22,9 @@ import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
-    var currentFile by remember { mutableStateOf<String?>(null) }
-    var currentContent by remember { mutableStateOf<String?>(null) }
+fun MainScreen(initialFile: Pair<String, String>? = null) {
+    var currentFile by remember { mutableStateOf(initialFile?.first) }
+    var currentContent by remember { mutableStateOf(initialFile?.second) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         if (currentFile != null && currentContent != null) {

@@ -1,44 +1,18 @@
 package com.mdviewer.ui.screens
 
-import android.text.Layout
-import android.text.SpannableStringBuilder
-import android.text.style.BackgroundColorSpan
-import android.text.style.StrikethroughSpan
-import android.text.style.StyleSpan
-import android.text.style.TypefaceSpan
-import android.text.style.URLSpan
+import android.view.ScaleGestureDetector
+import android.widget.TextView
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.mdviewer.ui.theme.CodeBackground
-import com.mdviewer.ui.theme.DarkCodeBackground
-import androidx.compose.foundation.isSystemInDarkTheme
-import io.noties.markwon.AbstractMarkwonPlugin
 import io.noties.markwon.Markwon
-import io.noties.markwon.MarkwonSpansFactory
-import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
-import io.noties.markwon.ext.tables.TablePlugin
 
 @Composable
 fun ViewerScreen(
@@ -48,16 +22,19 @@ fun ViewerScreen(
 ) {
     val context = LocalContext.current
 
-    val markwon = remember(context) {
+    var textSizeSp by remember { mutableFloatStateOf(16f) }
+    val minSize = 10f
+    val maxSize = 36f
+
+    val markwon = remember {
         Markwon.builder(context)
-            .usePlugin(StrikethroughPlugin.create())
-            .usePlugin(TablePlugin.create(context))
+            .usePlugin(io.noties.markwon.ext.strikethrough.StrikethroughPlugin.create())
+            .usePlugin(io.noties.markwon.ext.tables.TablePlugin.create(context))
             .build()
     }
 
-    val markdownSpans = remember(content, markwon) {
-        markwon.toMarkdown(content)
-    }
+    val bgColor = MaterialTheme.colorScheme.surface
+    val textColor = MaterialTheme.colorScheme.onSurface
 
     Column(modifier = modifier) {
         // File info bar
@@ -71,23 +48,52 @@ fun ViewerScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         )
 
-        // Rendered markdown content
-        val scrollState = rememberScrollState()
+        // Zoom indicator
+        if (kotlin.math.abs(textSizeSp - 16f) > 1f) {
+            Text(
+                text = "缩放: ${(textSizeSp / 16f * 100).toInt()}%",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
+            )
+        }
 
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(16.dp)
+                .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp)
         ) {
             AndroidView(
                 factory = { ctx ->
-                    markwon.createTextView(ctx).apply {
-                        textSize = 16f
-                        setLineSpacing(8f, 1f)
+                    TextView(ctx).apply {
+                        setBackgroundColor(bgColor.toArgb())
+                        setTextColor(textColor.toArgb())
+                        textSize = textSizeSp
+                        // Enable vertical scrolling within the TextView
+                        movementMethod = android.text.method.ScrollingMovementMethod.getInstance()
+                        setVerticalScrollBarEnabled(true)
+
+                        // Pinch-to-zoom using ScaleGestureDetector
+                        val scaleDetector = ScaleGestureDetector(ctx, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                            override fun onScale(detector: ScaleGestureDetector): Boolean {
+                                val newSize = (textSizeSp * detector.scaleFactor)
+                                    .coerceIn(minSize, maxSize)
+                                textSizeSp = newSize
+                                this@apply.textSize = newSize
+                                return true
+                            }
+                        })
+                        setOnTouchListener { view, event ->
+                            scaleDetector.onTouchEvent(event)
+                            // Don't consume, let TextView handle scrolling
+                            false
+                        }
                     }
                 },
                 update = { textView ->
+                    textView.setTextColor(textColor.toArgb())
+                    textView.setBackgroundColor(bgColor.toArgb())
+                    textView.textSize = textSizeSp
                     markwon.setMarkdown(textView, content)
                 }
             )
